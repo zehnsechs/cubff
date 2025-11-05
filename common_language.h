@@ -365,8 +365,15 @@ size_t Simulation<Language>::SamplePrograms(const SimulationParams& params,
   std::vector<size_t> res(num_programs);
   result.Read(res.data(), num_programs);
   size_t count = 0;
-  for (size_t r : res) {
-    if (r > kSelfrepThreshold) count++;
+  std::vector<uint8_t> prog(kSingleTapeSize * num_programs);
+  programs.Read(prog.data(), kSingleTapeSize * num_programs);
+  for (int i = 0; i < num_programs; ++i) {
+    if (res[i] > kSelfrepThreshold) {
+      count++;
+      uint8_t* tape = &prog[0] + i * kSingleTapeSize;
+      Language::PrintProgram(2 * kSingleTapeSize, tape, 2 * kSingleTapeSize,
+                             nullptr, 0);
+    }
   }
   return count;
 }
