@@ -54,7 +54,7 @@ __inline__ __device__ size_t GetIndex() {
 }
 
 __inline__ __device__ void IncreaseInsnCount(unsigned long long count,
-                                             unsigned long long *storage) {
+                                             unsigned long long* storage) {
   size_t index = GetIndex();
   size_t warp_ops = warpReduceSum(count);
   if (index % kWarpSize == 0) {
@@ -66,17 +66,17 @@ inline void Synchronize() { CUCHECK(cudaDeviceSynchronize()); }
 
 template <typename T>
 struct DeviceMemory {
-  T *data;
+  T* data;
   DeviceMemory(size_t size) { CUCHECK(cudaMalloc(&data, size * sizeof(T))); }
-  void Write(const T *host, size_t count) {
+  void Write(const T* host, size_t count) {
     CUCHECK(cudaMemcpy(data, host, count * sizeof(T), cudaMemcpyHostToDevice));
   }
-  void Read(T *host, size_t count) {
+  void Read(T* host, size_t count) {
     CUCHECK(cudaMemcpy(host, data, count * sizeof(T), cudaMemcpyDeviceToHost));
   }
-  T *Get() { return data; }
+  T* Get() { return data; }
   ~DeviceMemory() { CUCHECK(cudaFree(data)); }
-  DeviceMemory(DeviceMemory &) = delete;
+  DeviceMemory(DeviceMemory&) = delete;
 };
 
 #define RUN(grid, block, fun, ...) fun<<<grid, block>>>(__VA_ARGS__)
@@ -86,7 +86,7 @@ struct DeviceMemory {
 #define __host__
 #define __global__
 
-inline size_t &IndexThreadLocal() {
+inline size_t& IndexThreadLocal() {
   thread_local size_t index;
   return index;
 }
@@ -94,7 +94,7 @@ inline size_t &IndexThreadLocal() {
 inline size_t GetIndex() { return IndexThreadLocal(); }
 
 inline void IncreaseInsnCount(unsigned long long count,
-                              unsigned long long *storage) {
+                              unsigned long long* storage) {
   __atomic_add_fetch(storage, count, __ATOMIC_RELAXED);
 }
 
@@ -102,15 +102,15 @@ inline void Synchronize() {}
 
 template <typename T>
 struct DeviceMemory {
-  T *data;
-  DeviceMemory(size_t size) { data = (T *)malloc(size * sizeof(T)); }
-  void Write(const T *host, size_t count) {
+  T* data;
+  DeviceMemory(size_t size) { data = (T*)malloc(size * sizeof(T)); }
+  void Write(const T* host, size_t count) {
     memcpy(data, host, count * sizeof(T));
   }
-  void Read(T *host, size_t count) { memcpy(host, data, count * sizeof(T)); }
-  T *Get() { return data; }
+  void Read(T* host, size_t count) { memcpy(host, data, count * sizeof(T)); }
+  T* Get() { return data; }
   ~DeviceMemory() { free(data); }
-  DeviceMemory(DeviceMemory &) = delete;
+  DeviceMemory(DeviceMemory&) = delete;
 };
 
 #define RUN(grid, block, fun, ...)                                            \
@@ -137,7 +137,7 @@ inline __device__ __host__ uint64_t SplitMix64(uint64_t seed) {
 
 template <typename Language>
 __global__ void InitPrograms(size_t seed, size_t num_programs,
-                             uint8_t *programs, bool zero_init) {
+                             uint8_t* programs, bool zero_init) {
   size_t index = GetIndex();
   auto prog = programs + index * kSingleTapeSize;
   if (index >= num_programs) return;
@@ -155,10 +155,10 @@ __global__ void InitPrograms(size_t seed, size_t num_programs,
 }
 
 template <typename Language>
-__global__ void MutateAndRunPrograms(uint8_t *programs,
-                                     const uint32_t *shuf_idx, size_t seed,
+__global__ void MutateAndRunPrograms(uint8_t* programs,
+                                     const uint32_t* shuf_idx, size_t seed,
                                      uint32_t mutation_prob,
-                                     unsigned long long *insn_count,
+                                     unsigned long long* insn_count,
                                      size_t num_programs, size_t num_indices) {
   size_t index = GetIndex();
   uint8_t tape[2 * kSingleTapeSize] = {};
@@ -193,7 +193,7 @@ __global__ void MutateAndRunPrograms(uint8_t *programs,
 }
 
 template <typename Language>
-__global__ void RunOneProgram(uint8_t *program, size_t stepcount, bool debug) {
+__global__ void RunOneProgram(uint8_t* program, size_t stepcount, bool debug) {
   size_t ops = Language::Evaluate(program, stepcount, debug);
   printf("%s", ResetColors());
   printf("ops: %d\n", (int)ops);
@@ -201,8 +201,8 @@ __global__ void RunOneProgram(uint8_t *program, size_t stepcount, bool debug) {
 }
 
 template <typename Language>
-__global__ void CheckSelfRep(uint8_t *programs, size_t seed,
-                             size_t num_programs, size_t *result, bool debug) {
+__global__ void CheckSelfRep(uint8_t* programs, size_t seed,
+                             size_t num_programs, size_t* result, bool debug) {
   size_t index = GetIndex();
   constexpr size_t kNumIters = 13;
   constexpr size_t kNumExtraGens = 4;
@@ -217,7 +217,7 @@ __global__ void CheckSelfRep(uint8_t *programs, size_t seed,
           SplitMix64(local_seed ^ SplitMix64((i + 1) * kSingleTapeSize + j)) %
           256;
     }
-    uint8_t *tape = &tapes[i][0];
+    uint8_t* tape = &tapes[i][0];
     for (int j = 0; j < kSingleTapeSize; j++) {
       tape[j] = programs[index * kSingleTapeSize + j];
       tape[j + kSingleTapeSize] = noise[j];
@@ -278,7 +278,7 @@ __global__ void CheckSelfRep(uint8_t *programs, size_t seed,
 
 template <typename Language>
 void Simulation<Language>::RunSingleParsedProgram(
-    const std::vector<uint8_t> &parsed, size_t stepcount, bool debug) const {
+    const std::vector<uint8_t>& parsed, size_t stepcount, bool debug) const {
   DeviceMemory<uint8_t> mem(kSingleTapeSize * 2);
   uint8_t zero[2 * kSingleTapeSize] = {};
   memcpy(zero, parsed.data(), parsed.size());
@@ -303,8 +303,8 @@ void Simulation<Language>::RunSingleProgram(std::string program,
 }
 
 template <typename Language>
-void Simulation<Language>::PrintProgram(size_t pc_pos, const uint8_t *mem,
-                                        size_t len, const size_t *separators,
+void Simulation<Language>::PrintProgram(size_t pc_pos, const uint8_t* mem,
+                                        size_t len, const size_t* separators,
                                         size_t num_separators) const {
   Language::PrintProgram(pc_pos, mem, len, separators, num_separators);
 }
@@ -314,7 +314,6 @@ std::vector<uint8_t> Simulation<Language>::Parse(const std::string& program) {
   return Language::Parse(program);
 }
 
-
 template <typename Language>
 size_t Simulation<Language>::EvalSelfrep(std::string program, size_t epoch,
                                          size_t seed, bool debug) {
@@ -323,7 +322,7 @@ size_t Simulation<Language>::EvalSelfrep(std::string program, size_t epoch,
 }
 
 template <typename Language>
-size_t Simulation<Language>::EvalParsedSelfrep(std::vector<uint8_t> &parsed,
+size_t Simulation<Language>::EvalParsedSelfrep(std::vector<uint8_t>& parsed,
                                                size_t epoch, size_t seed,
                                                bool debug) {
   DeviceMemory<uint8_t> mem(kSingleTapeSize);
@@ -342,16 +341,47 @@ size_t Simulation<Language>::EvalParsedSelfrep(std::vector<uint8_t> &parsed,
 }
 
 template <typename Language>
+size_t Simulation<Language>::SamplePrograms(const SimulationParams& params,
+                                            size_t seed0, bool debug) const {
+  constexpr size_t kNumThreads = 32;
+  size_t num_programs = params.num_programs;
+
+  DeviceMemory<uint8_t> programs(kSingleTapeSize * num_programs);
+  DeviceMemory<unsigned long long> insn_count(1);
+  DeviceMemory<size_t> result(num_programs);
+
+  auto seed = [&](size_t seed2) {
+    return SplitMix64(SplitMix64(params.seed) ^ SplitMix64(seed2));
+  };
+
+  RUN((num_programs + kNumThreads - 1) / kNumThreads, kNumThreads,
+      InitPrograms<Language>, seed(seed0), num_programs, programs.Get(),
+      params.zero_init);
+  Synchronize();
+  RUN((num_programs + kNumThreads - 1) / kNumThreads, kNumThreads,
+      CheckSelfRep<Language>, programs.Get(), 0, num_programs, result.Get(),
+      debug);
+  Synchronize();
+  std::vector<size_t> res(num_programs);
+  result.Read(res.data(), num_programs);
+  size_t count = 0;
+  for (size_t r : res) {
+    if (r > kSelfrepThreshold) count++;
+  }
+  return count;
+}
+
+template <typename Language>
 void Simulation<Language>::RunSimulation(
-    const SimulationParams &params, std::optional<std::string> initial_program,
-    std::function<bool(const SimulationState &)> callback) const {
+    const SimulationParams& params, std::optional<std::string> initial_program,
+    std::function<bool(const SimulationState&)> callback) const {
   constexpr size_t kNumThreads = 32;
   size_t num_programs = params.num_programs;
 
   size_t reset_index = 1;
   size_t epoch = 0;
 
-  FILE *load_file = nullptr;
+  FILE* load_file = nullptr;
   if (params.load_from.has_value()) {
     load_file = CheckFopen(params.load_from->c_str(), "r");
     CHECK(fread(&reset_index, sizeof(reset_index), 1, load_file) == 1);
@@ -374,7 +404,7 @@ void Simulation<Language>::RunSimulation(
 
   if (initial_program.has_value()) {
     std::vector<uint8_t> parsed = Language::Parse(*initial_program);
-    programs.Write((const unsigned char *)parsed.data(), parsed.size());
+    programs.Write((const unsigned char*)parsed.data(), parsed.size());
   }
 
   unsigned long long zero = 0;
@@ -404,7 +434,7 @@ void Simulation<Language>::RunSimulation(
 
   DeviceMemory<uint32_t> shuf_idx(num_programs);
 
-  std::vector<uint32_t> &s = state.shuffle_idx;
+  std::vector<uint32_t>& s = state.shuffle_idx;
 
   for (size_t i = 0; i < num_programs; i++) {
     s[i] = i;
@@ -415,7 +445,7 @@ void Simulation<Language>::RunSimulation(
 
   Synchronize();
 
-  auto do_shuffle = [&](uint32_t *begin, uint32_t *end, uint64_t base_seed) {
+  auto do_shuffle = [&](uint32_t* begin, uint32_t* end, uint64_t base_seed) {
     size_t len = end - begin;
     for (size_t i = len; i-- > 0;) {
       size_t j = SplitMix64(seed(epoch * len + i)) % (i + 1);
@@ -441,7 +471,7 @@ void Simulation<Language>::RunSimulation(
                  shuffle_tmp_buf.data() + shuffle_tmp_buf.size(), epoch);
       num_indices = 0;
       for (size_t i : shuffle_tmp_buf) {
-        auto &interact = params.allowed_interactions;
+        auto& interact = params.allowed_interactions;
         if (interact.size() <= i || interact[i].empty()) {
           continue;
         }
@@ -571,7 +601,7 @@ void Simulation<Language>::RunSimulation(
         std::vector<char> save_path(params.save_to->size() + 20);
         snprintf(save_path.data(), save_path.size(), "%s/%010zu.dat",
                  params.save_to->c_str(), epoch);
-        FILE *f = CheckFopen(save_path.data(), "w");
+        FILE* f = CheckFopen(save_path.data(), "w");
         size_t epoch_to_save = epoch + 1;
         fwrite(&reset_index, sizeof(reset_index), 1, f);
         fwrite(&num_programs, sizeof(num_programs), 1, f);

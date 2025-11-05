@@ -28,27 +28,27 @@
 namespace flags {
 class BaseFlag {
  public:
-  static std::unordered_map<std::string, BaseFlag *> *reg() {
-    static std::unordered_map<std::string, BaseFlag *> r;
+  static std::unordered_map<std::string, BaseFlag*>* reg() {
+    static std::unordered_map<std::string, BaseFlag*> r;
     return &r;
   }
 
-  virtual size_t Parse(int argc, char **argv) = 0;
-  virtual const char *Description() = 0;
+  virtual size_t Parse(int argc, char** argv) = 0;
+  virtual const char* Description() = 0;
   virtual void PrintValue() = 0;
-  virtual bool ShouldPrintDescription(const std::string &flag) = 0;
+  virtual bool ShouldPrintDescription(const std::string& flag) = 0;
 
   virtual ~BaseFlag() {}
 
-  static void ParseCommandLine(int argc, char **argv) {
+  static void ParseCommandLine(int argc, char** argv) {
     auto help_and_exit = [&]() {
       fprintf(stderr, "%s flags\n\n", argv[0]);
       std::vector<std::string> all_flags;
-      for (const auto &[f, _] : *reg()) {
+      for (const auto& [f, _] : *reg()) {
         all_flags.push_back(f);
       }
       std::sort(all_flags.begin(), all_flags.end());
-      for (const auto &f : all_flags) {
+      for (const auto& f : all_flags) {
         if (!(*reg())[f]->ShouldPrintDescription(f)) {
           continue;
         }
@@ -71,7 +71,7 @@ class BaseFlag {
         fprintf(stderr, "Unknown flag %s\n", argv[pos]);
         help_and_exit();
       }
-      BaseFlag *parser = iter->second;
+      BaseFlag* parser = iter->second;
       pos += parser->Parse(argc - pos, argv + pos);
     }
   }
@@ -82,26 +82,26 @@ struct Types;
 
 template <>
 struct Types<std::string> {
-  static std::string Parse(const char *v) { return v; }
-  static void Print(const std::string &v) { fprintf(stderr, "%s", v.c_str()); }
+  static std::string Parse(const char* v) { return v; }
+  static void Print(const std::string& v) { fprintf(stderr, "%s", v.c_str()); }
 };
 
 template <>
 struct Types<double> {
-  static double Parse(const char *v) { return std::stod(v); }
-  static void Print(const double &v) { fprintf(stderr, "%8.5f", v); }
+  static double Parse(const char* v) { return std::stod(v); }
+  static void Print(const double& v) { fprintf(stderr, "%8.5f", v); }
 };
 
 template <>
 struct Types<size_t> {
-  static size_t Parse(const char *v) { return std::stoul(v); }
-  static void Print(const size_t &v) { fprintf(stderr, "%zu", v); }
+  static size_t Parse(const char* v) { return std::stoul(v); }
+  static void Print(const size_t& v) { fprintf(stderr, "%zu", v); }
 };
 
 template <typename T>
 struct Types<std::optional<T>> {
-  static std::optional<T> Parse(const char *v) { return Types<T>::Parse(v); }
-  static void Print(const std::optional<T> &v) {
+  static std::optional<T> Parse(const char* v) { return Types<T>::Parse(v); }
+  static void Print(const std::optional<T>& v) {
     if (v.has_value()) {
       Types<T>::Print(*v);
     } else {
@@ -113,8 +113,8 @@ struct Types<std::optional<T>> {
 template <typename T>
 class Flag : public BaseFlag {
  public:
-  Flag(const char *opt, const char *noopt, T default_value,
-       const char *description)
+  Flag(const char* opt, const char* noopt, T default_value,
+       const char* description)
       : opt_(opt),
         noopt_(noopt),
         value_(std::move(default_value)),
@@ -125,9 +125,9 @@ class Flag : public BaseFlag {
     }
   }
 
-  const T &Get() const { return value_; }
+  const T& Get() const { return value_; }
 
-  size_t Parse(int argc, char **argv) override {
+  size_t Parse(int argc, char** argv) override {
     if constexpr (std::is_same_v<bool, T>) {
       value_ = (argv[0] == std::string(opt_));
       return 0;
@@ -140,8 +140,8 @@ class Flag : public BaseFlag {
       return 1;
     }
   }
-  const char *Description() override { return description_; }
-  bool ShouldPrintDescription(const std::string &flag) override {
+  const char* Description() override { return description_; }
+  bool ShouldPrintDescription(const std::string& flag) override {
     return flag == opt_;
   }
   void PrintValue() override {
@@ -153,10 +153,10 @@ class Flag : public BaseFlag {
   }
 
  private:
-  const char *opt_;
-  const char *noopt_;
+  const char* opt_;
+  const char* noopt_;
   T value_;
-  const char *description_;
+  const char* description_;
 };
 
 #define FLAG(type, name, default_value, description)                      \
@@ -164,17 +164,19 @@ class Flag : public BaseFlag {
                                  description);
 
 template <typename T>
-const T &GetFlag(const Flag<T> &flag) {
+const T& GetFlag(const Flag<T>& flag) {
   return flag.Get();
 }
 
-void ParseCommandLine(int argc, char **argv) {
+void ParseCommandLine(int argc, char** argv) {
   BaseFlag::ParseCommandLine(argc, argv);
 }
 
 }  // namespace flags
 
 FLAG(std::optional<std::string>, run, std::nullopt, "run a program");
+FLAG(std::optional<std::size_t>, sample, std::nullopt,
+     "sample programs and test for selfreplication");
 FLAG(size_t, run_steps, 32 * 1024, "max number of steps for running a program");
 FLAG(bool, debug, false, "print execution step by step");
 FLAG(size_t, num, 128 * 1024, "number of programs to evolve");
@@ -213,7 +215,7 @@ FLAG(bool, disable_output, false, "disable printing to stdout");
 FLAG(std::optional<size_t>, stopping_selfrep_count, std::nullopt,
      "stop when that many programs appear to be self-replicators");
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   flags::ParseCommandLine(argc, argv);
 
   bool debug = GetFlag(FLAGS_debug);
@@ -279,7 +281,7 @@ int main(int argc, char **argv) {
   std::vector<uint8_t> draw_buf_2d(params.num_programs * 3 * kSingleTapeSize);
 
   if (!interaction_pattern.empty()) {
-    FILE *f = fopen(interaction_pattern.c_str(), "r");
+    FILE* f = fopen(interaction_pattern.c_str(), "r");
     if (!f) {
       fprintf(stderr, "could not open interaction pattern file\n");
       return 1;
@@ -324,14 +326,23 @@ int main(int argc, char **argv) {
   params.callback_interval = print_interval;
 
   auto run_flag = GetFlag(FLAGS_run);
+  auto sample_flag = GetFlag(FLAGS_sample);
   auto lang = GetFlag(FLAGS_lang);
-  const LanguageInterface *language = GetLanguage(lang);
+  const LanguageInterface* language = GetLanguage(lang);
   if (run_flag.has_value()) {
     printf("%s", ResetColors());
     language->RunSingleProgram(run_flag.value(), GetFlag(FLAGS_run_steps),
                                debug);
+  } else if (sample_flag.has_value()) {
+    size_t sampled = 0;
+    size_t replicators = 0;
+    for (size_t i = 0; i < sample_flag.value(); ++i) {
+      sampled += params.num_programs;
+      replicators += language->SamplePrograms(params, i, debug);
+    }
+    printf("tested %zu programs, found %zu replicators", sampled, replicators);
   } else {
-    FILE *logfile = nullptr;
+    FILE* logfile = nullptr;
     if (log_to.has_value()) {
       logfile = CheckFopen(log_to->c_str(), "w");
       if (params.eval_selfrep) {
@@ -342,7 +353,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    auto callback = [&](const SimulationState &state) {
+    auto callback = [&](const SimulationState& state) {
       int repl_count = 0;
       for (size_t i = 0; i < state.replication_per_prog.size(); i++) {
         if (state.replication_per_prog[i] >= kSelfrepThreshold) {
@@ -400,14 +411,14 @@ int main(int argc, char **argv) {
         fflush(logfile);
       }
 
-      auto write_ppm = [](const std::string &base, size_t frame, size_t xs,
-                          size_t ys, const std::vector<uint8_t> &data) {
+      auto write_ppm = [](const std::string& base, size_t frame, size_t xs,
+                          size_t ys, const std::vector<uint8_t>& data) {
         assert(data.size() == xs * ys * 3);
         std::string out_path(base.size() + 64, 0);
         out_path.resize(snprintf(out_path.data(), out_path.size(),
                                  "%s/%012lld.ppm", base.c_str(),
                                  (long long)frame));
-        FILE *f = CheckFopen(out_path.c_str(), "w");
+        FILE* f = CheckFopen(out_path.c_str(), "w");
         fprintf(f, "P6\n%lld %lld\n255\n", (long long)xs, (long long)ys);
         fwrite(data.data(), 1, data.size(), f);
         fclose(f);

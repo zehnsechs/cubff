@@ -47,13 +47,12 @@
 #ifdef __CUDACC__
 __device__ __host__
 #endif
-    inline constexpr const char *
-    ResetColors() {
+    inline constexpr const char* ResetColors() {
   return "\x1b[0;38:5:35;48:5:232m";
 }
 
 constexpr int kSingleTapeSize = 64;
-constexpr int kSelfrepThreshold = 5;
+constexpr int kSelfrepThreshold = 48;
 
 struct SimulationParams {
   size_t num_programs = 128 * 1024;
@@ -93,53 +92,57 @@ struct SimulationState {
 struct LanguageInterface {
   virtual void RunSingleProgram(std::string program, size_t stepcount,
                                 bool debug) const = 0;
-  virtual void RunSingleParsedProgram(const std::vector<uint8_t> &parsed,
+  virtual void RunSingleParsedProgram(const std::vector<uint8_t>& parsed,
                                       size_t stepcount, bool debug) const = 0;
-  virtual void PrintProgram(size_t pc_pos, const uint8_t *mem, size_t len,
-                            const size_t *separators,
+  virtual void PrintProgram(size_t pc_pos, const uint8_t* mem, size_t len,
+                            const size_t* separators,
                             size_t num_separators) const = 0;
   virtual void RunSimulation(
-      const SimulationParams &params,
+      const SimulationParams& params,
       std::optional<std::string> initial_program,
-      std::function<bool(const SimulationState &)> callback) const = 0;
+      std::function<bool(const SimulationState&)> callback) const = 0;
   virtual ~LanguageInterface() {}
   virtual size_t EvalSelfrep(std::string program, size_t epoch, size_t seed,
                              bool debug) = 0;
-  virtual size_t EvalParsedSelfrep(std::vector<uint8_t> &parsed, size_t epoch,
+  virtual size_t EvalParsedSelfrep(std::vector<uint8_t>& parsed, size_t epoch,
                                    size_t seed, bool debug) = 0;
   virtual std::vector<uint8_t> Parse(const std::string& program) = 0;
+  virtual size_t SamplePrograms(const SimulationParams& params, size_t seed0,
+                                bool debug) const = 0;
 };
 
 template <typename Language>
 struct Simulation : public LanguageInterface {
   void RunSingleProgram(std::string program, size_t stepcount,
                         bool debug) const override;
-  void PrintProgram(size_t pc_pos, const uint8_t *mem, size_t len,
-                    const size_t *separators,
+  void PrintProgram(size_t pc_pos, const uint8_t* mem, size_t len,
+                    const size_t* separators,
                     size_t num_separators) const override;
-  void RunSingleParsedProgram(const std::vector<uint8_t> &parsed,
+  void RunSingleParsedProgram(const std::vector<uint8_t>& parsed,
                               size_t stepcount, bool debug) const override;
   void RunSimulation(
-      const SimulationParams &params,
+      const SimulationParams& params,
       std::optional<std::string> initial_program,
-      std::function<bool(const SimulationState &)> callback) const override;
+      std::function<bool(const SimulationState&)> callback) const override;
   size_t EvalSelfrep(std::string program, size_t epoch, size_t seed,
                      bool debug) override;
-  size_t EvalParsedSelfrep(std::vector<uint8_t> &parsed, size_t epoch,
+  size_t EvalParsedSelfrep(std::vector<uint8_t>& parsed, size_t epoch,
                            size_t seed, bool debug) override;
   std::vector<uint8_t> Parse(const std::string& program) override;
+  size_t SamplePrograms(const SimulationParams& params, size_t seed0,
+                        bool debug) const override;
 };
 
-void RegisterLanguage(const char *lang,
+void RegisterLanguage(const char* lang,
                       std::unique_ptr<LanguageInterface> interface);
 
 template <typename Language>
 void Register() {}
 
-const LanguageInterface *GetLanguage(const std::string &language);
+const LanguageInterface* GetLanguage(const std::string& language);
 
-inline FILE *CheckFopen(const char *f, const char *mode) {
-  FILE *out = fopen(f, mode);
+inline FILE* CheckFopen(const char* f, const char* mode) {
+  FILE* out = fopen(f, mode);
   char buf[4096];
   if (out == nullptr) {
     fprintf(stderr, "Could not open %s: %s\n", f,
